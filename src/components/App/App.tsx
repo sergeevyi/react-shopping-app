@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Item from '../Item/Item';
 import { useQuery } from 'react-query';
 import Drawer from '@material-ui/core/Drawer';
@@ -21,6 +21,13 @@ import Cart from '../Cart/Cart';
 
 import AccountCircle from '@material-ui/icons/AccountCircle';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  getProductsList,
+  productSelector,
+  productsSlice
+} from '../../features/products/productsSlice';
+import { RootState } from '../../rootReducer';
 
 export type CartItemType = {
   id: number;
@@ -57,26 +64,21 @@ const useStyles = makeStyles((theme: Theme) =>
   })
 );
 
-const getProducts = async (category?: string): Promise<CartItemType[]> =>
-  await (
-    await fetch(
-      category
-        ? 'https://fakestoreapi.com/products/category/' + category
-        : 'https://fakestoreapi.com/products'
-    )
-  ).json();
-
 const getCategories = async (): Promise<string[]> =>
   await (await fetch('https://fakestoreapi.com/products/categories')).json();
 
 const App = () => {
+  const dispatch = useDispatch();
+  const { products, errors, loading } = useSelector(productSelector);
+
+  useEffect(() => {
+    dispatch(getProductsList());
+  }, [dispatch]);
+
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [cartOpen, setCardOpen] = useState(false);
   const [cartItems, setCartItems] = useState([] as CartItemType[]);
-  const { data, isLoading, error } = useQuery<CartItemType[]>(
-    ['products', category],
-    () => getProducts(category)
-  );
+
   const categories = useQuery<string[]>('categories', getCategories);
   const classes = useStyles();
 
@@ -119,8 +121,8 @@ const App = () => {
     );
   };
 
-  if (isLoading) return <LinearProgress />;
-  if (error) return <div>Something went wrong...</div>;
+  if (loading) return <LinearProgress />;
+  if (errors) return <div>Something went wrong...</div>;
 
   return (
     <div className={classes.root}>
@@ -176,7 +178,7 @@ const App = () => {
         </Breadcrumbs>
 
         <Grid container spacing={2}>
-          {data?.map((item) => (
+          {products?.map((item) => (
             <Grid item key={item.id} xs={4} sm={2}>
               <Item item={item} handleAddToCard={handleAddToCart} />
             </Grid>
